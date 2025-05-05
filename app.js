@@ -48,22 +48,43 @@ function handleInput(input) {
 
 function noteOn(note, velocity) {
   const osc = ctx.createOscillator();
-  oscillators[note.toString()] = osc;
-  console.log(oscillators);
 
   const oscGain = ctx.createGain();
   oscGain.gain.value = 0.33;
-  osc.type = "sine";
+
+  const velocityGainAmount = (1 / 127) * velocity;
+  const velocityGain = ctx.createGain();
+  velocityGain.gain.value = velocityGainAmount;
+
+  osc.type = "square";
   osc.frequency.value = midiToFreq(note);
 
   osc.connect(oscGain);
-  oscGain.connect(ctx.destination);
+  oscGain.connect(velocityGain);
+  velocityGain.connect(ctx.destination);
+
+  osc.gain = oscGain;
+
+  oscillators[note.toString()] = osc;
+  console.log(oscillators);
+
   osc.start();
 }
 
 function noteOff(note) {
   const osc = oscillators[note.toString()];
-  osc.stop();
+  const oscGain = osc.gain;
+
+  oscGain.gain.setValueAtTime(oscGain.gain.value, ctx.currentTime);
+  oscGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.03);
+
+  setTimeout(() => {
+    osc.stop();
+    osc.disconect();
+  }, 20);
+
+  delete oscillators[note.toString()];
+  console.log(oscillators);
 }
 
 function updateDevices(event) {
