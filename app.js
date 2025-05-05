@@ -1,3 +1,18 @@
+window.AudioContext = window.AudioContext || window.webkitAudioContext;
+let ctx;
+const startButton = document.querySelector("button");
+const oscillators = {};
+
+function midiToFreq(number) {
+  const a = 440;
+  return (a / 32) * 2 ** ((number - 9) / 12);
+}
+
+startButton.addEventListener("click", () => {
+  ctx = new AudioContext();
+  console.log(ctx);
+});
+
 if (navigator.requestMIDIAccess) {
   navigator.requestMIDIAccess().then(success, failure);
 }
@@ -32,11 +47,23 @@ function handleInput(input) {
 }
 
 function noteOn(note, velocity) {
-  console.log(note, velocity);
+  const osc = ctx.createOscillator();
+  oscillators[note.toString()] = osc;
+  console.log(oscillators);
+
+  const oscGain = ctx.createGain();
+  oscGain.gain.value = 0.33;
+  osc.type = "sine";
+  osc.frequency.value = midiToFreq(note);
+
+  osc.connect(oscGain);
+  oscGain.connect(ctx.destination);
+  osc.start();
 }
 
 function noteOff(note) {
-  console.log(note);
+  const osc = oscillators[note.toString()];
+  osc.stop();
 }
 
 function updateDevices(event) {
